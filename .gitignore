@@ -1,0 +1,20 @@
+#Virtual Environment
+ai-venv/
+venv/
+
+#Runtime Memory
+app/memory_store/
+
+#Python Cache
+__pycaceh__/
+*.pyc
+
+#Jupyter
+.ipynb_checkpoints/
+
+#OS Junk
+.DS_Store
+Thumbs.db
+
+#Environment Variables
+.env

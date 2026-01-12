@@ -1,0 +1,25 @@
+{
+  "participants": [
+    {
+      "name": "Instagram User"
+    },
+    {
+      "name": "Rehan Raza"
+    }
+  ],
+  "messages": [
+    {
+      "sender_name": "Instagram User",
+      "timestamp_ms": 1754493549882,
+      "content": "We provide free trading signals with over 80% accuracy, 4 to 5 signals per day with appropriate take profit and stop loss. Admins are required to join our investor group. Add WhatsApp group: https://chat.whatsapp.com/CQ7sWqEIws8IIJY0YF6iEl",
+      "is_geoblocked_for_viewer": false,
+      "is_unsent_image_by_messenger_kid_parent": false
+    }
+  ],
+  "title": "Instagram User",
+  "is_still_participant": true,
+  "thread_path": "inbox/instagramuser_17846214963539947",
+  "magic_words": [
+    
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "participants": [
+    {
+      "name": "_OreoTallCake"
+    },
+    {
+      "name": "Rehan Raza"
+    }
+  ],
+  "messages": [
+    {
+      "sender_name": "Rehan Raza",
+      "timestamp_ms": 1766072267429,
+      "content": "Not everyone can message this account.",
+      "is_geoblocked_for_viewer": false,
+      "is_unsent_image_by_messenger_kid_parent": false
+    },
+    {
+      "sender_name": "Rehan Raza",
+      "timestamp_ms": 1766072263293,
+      "content": "Holy which game is ts?",
+      "is_geoblocked_for_viewer": false,
+      "is_unsent_image_by_messenger_kid_parent": false
+    }
+  ],
+  "title": "_OreoTallCake",
+  "is_still_participant": true,
+  "thread_path": "inbox/_oreotallcake_17953478040026435",
+  "magic_words": [
+    
+  ]
+}
