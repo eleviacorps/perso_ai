@@ -18,7 +18,7 @@ from peft import PeftModel
 # CONFIGURATION
 
 MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
-LORA_PATH = "./lora-llama3/Training3/checkpoint-814"
+LORA_PATH = "./app/lora-llama3/Training3/checkpoint-814"
 CHAT_JSON_PATH = "chats.json"
 
 MAX_NEW_TOKENS = 400
@@ -373,7 +373,7 @@ def build_behavior_profile(name: str):
 # -------------------------
 # SESSION MEMORY STORAGE
 
-MEMORY_DIR = "memory_store"
+MEMORY_DIR = "/app/memory_store"
 os.makedirs(MEMORY_DIR, exist_ok=True)
 
 def load_session(session_id: str):
