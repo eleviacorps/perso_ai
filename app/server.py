@@ -1,5 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Main server file for Rehan AI
+# -------------------------
+# IMPORTS
+
 import torch
 import json
+import os
+import re
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -7,11 +15,10 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
 
 # -------------------------
-# CONFIG
-# -------------------------
+# CONFIGURATION
 
 MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
-LORA_PATH = "./app/lora-llama3/Training3/checkpoint-814"
+LORA_PATH = "./lora-llama3/Training3/checkpoint-814"
 CHAT_JSON_PATH = "chats.json"
 
 MAX_NEW_TOKENS = 400
@@ -20,13 +27,11 @@ BOOTSTRAP_TURNS = 80
 
 # -------------------------
 # LOAD BOOTSTRAP MEMORY
-# -------------------------
 
 bootstrap_memory = []
 
 # -------------------------
 # LOAD MODEL ON STARTUP
-# -------------------------
 
 print("Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
@@ -56,7 +61,6 @@ print("Model ready.")
 
 # -------------------------
 # FASTAPI APP
-# -------------------------
 
 app = FastAPI()
 
@@ -68,7 +72,8 @@ class ChatRequest(BaseModel):
 # Per-user in-memory conversation store
 memory = {} 
 
-
+# -------------------------
+# UI ENDPOINT
 
 @app.get("/", response_class=HTMLResponse)
 def ui():
@@ -256,6 +261,7 @@ document.getElementById("msg-input").addEventListener("keydown", e => {
 </html>
 """
 
+#ALL OF THE MEMORY BELOW IS STATIC AND DOES NOT CHANGE DURING A SESSION
 
 SELF_MEMORY ="""
 CANONICAL SELF MEMORY (always true):
@@ -285,6 +291,8 @@ Hard rules:
 - Do NOT invent trauma, relationships, crushes, or life events
 - If unsure, say "idk", "not really", or ask instead
 """
+
+#PERSON MEMORY STORE
 
 PEOPLE_MEMORY = {
     "Hana": {
@@ -321,6 +329,8 @@ PEOPLE_MEMORY = {
         }
     }
 }
+
+# BUILD MEMORY STRINGS
 
 def build_public_facts(name: str):
     person = PEOPLE_MEMORY.get(name)
@@ -360,28 +370,10 @@ def build_behavior_profile(name: str):
 
     return "\n".join(lines)
 
+# -------------------------
+# SESSION MEMORY STORAGE
 
-#def build_user_facts(name: str):
- #   return f"The user's name is {name}."
-
-#def build_behavior_constraints(name: str):
-   # person = PEOPLE_MEMORY.get(name)
-   # if not person:
-    #    return ""
-
-    #lines = []
-    #lines.append(f"When chatting with {name}:")
-    #lines.append(f"- Use a {person['tone']} tone.")
-    #lines.append(f"- Treat the bond as {person['bond']}.")
-
-    #for b in person.get("boundaries", []):
-        #lines.append(f"- {b}.")
-
-    #return "\n".join(lines)#
-
-import os
-
-MEMORY_DIR = "app/memory_store"
+MEMORY_DIR = "memory_store"
 os.makedirs(MEMORY_DIR, exist_ok=True)
 
 def load_session(session_id: str):
@@ -396,8 +388,8 @@ def save_session(session_id: str, data: dict):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-
-import re
+# -------------------------
+# CHAT ENDPOINT
 
 def extract_candidate_facts(message: str):
     facts = {}
@@ -419,6 +411,8 @@ def extract_candidate_facts(message: str):
 
     return facts
 
+# -------------------------
+# CHAT HANDLER
 
 @app.post("/chat")
 def chat(req: ChatRequest):
@@ -427,8 +421,7 @@ def chat(req: ChatRequest):
     user_msg = req.message.strip()
 
     # -------------------------
-    # MEMORY (conversation only)
-    # -------------------------
+    # LOAD OR INIT SESSION
 
     session = load_session(session_id)
 
@@ -446,6 +439,9 @@ def chat(req: ChatRequest):
                 "candidates": {},
             }
         }
+
+    # -------------------------
+    # EXTRACT CANDIDATE FACTS
 
     extracted_candidate_facts = extract_candidate_facts(user_msg)
 
@@ -477,96 +473,67 @@ def chat(req: ChatRequest):
         if data["count"] >= PROMOTION_THRESHOLD:
             session["facts"]["private"][key] = data["value"]
             del session["facts"]["candidates"][key]
-
+ 
+    # -------------------------
+    # SAVE USER MESSAGE
+ 
     session["conversation"].append({
         "role": "user",
         "content": user_msg
     })
 
-    # -------------------------
-    # PERSON MEMORY (optional)
-    # -------------------------
-
-    # person = PEOPLE_MEMORY.get(name)
-    # person_context = ""
-
-    # if person:
-    #     person_context = f"""
-    #         LOCKED PEOPLE MEMORY:
-    #             - Name: {name}
-    #             - Bond: {person['bond']}
-    #             - Tone: {person['tone']}
-    #         """
-
-    #     if "facts" in person:
-    #         person_context += "\nKNOWN FACTS:\n"
-    #         for f in person["facts"]:
-    #             person_context += f"- {f}\n"
-
-    #     person_context += "\nBOUNDARIES:\n"
-    #     for b in person["boundaries"]:
-    #         person_context += f"- {b}\n"
-
-    #     person_context +="""
-    #     RULE:
-    #         - When asked about bond, tone, or boundaries, answer EXACTLY as written above.
-    #         - Do not explain or justify."""
-
-    # -------------------------
-    # SYSTEM PROMPT (grounded)
-    # -------------------------
-
-    #fact_memory = build_user_facts(name)
+    # ------------------------- 
+    # BUILD MESSAGES
 
     system_prompt = {
     "role": "system",
     "content": f"""
-You are Rehan.
+        You are Rehan.
 
-Your identity is fixed:
-- Name: Rehan
-- Gender: male
-- Orientation: straight
+        Your identity is fixed:
+            - Name: Rehan
+            - Gender: male
+            - Orientation: straight
 
-You are chatting casually on Instagram.
+        You are chatting casually on Instagram.
 
-====================
-KNOWN PUBLIC FACTS ABOUT THE USER:
-{build_public_facts(name)}
+        ====================
+        KNOWN PUBLIC FACTS ABOUT THE USER:
+            {build_public_facts(name)}
 
-====================
-BEHAVIOR RULES FOR THIS USER:
-{build_behavior_profile(name)}
+        ====================
+        BEHAVIOR RULES FOR THIS USER:
+            {build_behavior_profile(name)}
 
-====================
-PRIVATE FACTS:
-{build_private_facts(name)}
-{json.dumps(session["facts"]["private"], indent=2)}
+        ====================
+        PRIVATE FACTS:
+            {build_private_facts(name)}
+            {json.dumps(session["facts"]["private"], indent=2)}
 
-====================
-RULES:
-- Private facts are known but not shared unless asked
-- You may ask personal questions naturally.
-- You may only state facts that exist above.
-- You must NEVER invent facts.
-- If asked something not in memory, say "idk".
-- Do not narrate memory or say how you know things.
-- Do not reinterpret facts.
-- Keep replies casual and human.
+        ====================
+        RULES:
+            - Private facts are known but not shared unless asked
+            - You may ask personal questions naturally.
+            - You may only state facts that exist above.
+            - You must NEVER invent facts.
+            - If asked something not in memory, say "idk".
+            - Do not narrate memory or say how you know things.
+            - Do not reinterpret facts.
+            - Keep replies casual and human.
 
-====================
-IMPORTANT:
-If asked about name, bond, tone, or boundaries:
-→ answer directly and confidently.
-"""
-}
+        ====================
+        IMPORTANT:
+            If asked about name, bond, tone, or boundaries:
+            → answer directly and confidently."""
+    }
 
+    # -------------------------
+    # BUILD MESSAGE CONTEXT
 
     messages = [system_prompt] + session["conversation"][-MAX_CONTEXT_TURNS:]
 
     # -------------------------
     # TOKENIZE
-    # -------------------------
 
     input_ids = tokenizer.apply_chat_template(
         messages,
@@ -576,6 +543,9 @@ If asked about name, bond, tone, or boundaries:
     ).to(model.device)
 
     attention_mask = torch.ones_like(input_ids)
+
+    # -------------------------
+    # DETECT FACT QUESTIONS
 
     FACT_QUESTIONS = [
     "what's my name",
@@ -590,8 +560,7 @@ If asked about name, bond, tone, or boundaries:
     is_fact_question = any(q in lower_msg for q in FACT_QUESTIONS)
 
     # -------------------------
-    # GENERATE
-    # -------------------------
+    # GENERATE REPLY
 
     early_turn = len(session["conversation"]) < 6
 
@@ -612,8 +581,7 @@ If asked about name, bond, tone, or boundaries:
     reply = tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
 
     # -------------------------
-    # SAVE ASSISTANT MESSAGE
-    # -------------------------
+    # SAVE ASSISTANT REPLY IF SAFE
 
     def is_safe_assistant_reply(text: str) -> bool:
         banned = [
